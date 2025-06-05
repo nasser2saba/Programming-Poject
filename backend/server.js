@@ -1,20 +1,11 @@
-require("dotenv").config();
+require('dotenv').config();
+const app = require('./app');
+const sequelize = require('./config/database');
 
-const express = require("express");
-const app = express();
-const cors = require("cors");
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-
-// Default route
-app.get("/", (req, res) => {
-res.send("Medicatie Herinneringsapp API is running!");
-});
-
-// Start server
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-console.log(`Server is running on port ${PORT}`);
+
+sequelize.sync().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server draait op poort ${PORT}`);
+  });
 });
