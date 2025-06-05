@@ -1,5 +1,5 @@
 # Medicatie Herinneringsapp
-~Saba Le Nassr (individueel)~
+~ Saba Le Nassr (individueel)
 
 ## 1. Doelstellingen 
 De Medicatie Herinneringsapp heeft als doel om ouderen en chronische patiënten te helpen bij het correct en tijdig innemen van hun medicatie. De belangrijkste doelstellingen zijn:
