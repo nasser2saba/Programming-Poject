@@ -1,49 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  Alert,
+  ImageBackground,
+} from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-
-
-/*
-export default function HerinneringenScreen() {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Historiek</Text>
-    </View>
-  );
-}
-
-export default function HistoryScreen() {
-  const [logs] = useState([
-    { id: '1', naam: 'Paracetamol', status: 'voltooid', datum: '2025-05-17' },
-    { id: '2', naam: 'Ibuprofen', status: 'gemist', datum: '2025-05-16' },
-    { id: '3', naam: 'Amoxicilline', status: 'voltooid', datum: '2025-05-15' },
-  ]);
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Inname Historiek</Text>
-      <FlatList
-        data={logs}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.logItem}>
-            <Text>{item.datum} - {item.naam}</Text>
-            <Text>Status: {item.status}</Text>
-          </View>
-        )}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 10 },
-  logItem: { backgroundColor: '#eee', padding: 10, marginVertical: 5, borderRadius: 5 }
-});
-*/
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Marking = {
   dots?: { color: string }[];
@@ -57,8 +24,10 @@ type MarkedDates = {
 };
 
 type ReminderLog = {
+  id: number;
   timestamp: string;
   status: 'voltooid' | 'gemist';
+  medication_id: number;
   Medication?: {
     naam: string;
   };
@@ -66,42 +35,62 @@ type ReminderLog = {
 
 export default function HistoryScreen() {
   const [logs, setLogs] = useState<ReminderLog[]>([]);
-  
+  const [meds, setMeds] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>('');
-const [markedDates, setMarkedDates] = useState<MarkedDates>({});
-
-  
+  const [markedDates, setMarkedDates] = useState<MarkedDates>({});
 
   useEffect(() => {
-    fetchLogs();
+    fetchLogsAndMeds();
   }, []);
 
-
-  const fetchLogs = async () => {
+  const fetchLogsAndMeds = async () => {
     const token = await SecureStore.getItemAsync('token');
-    console.log(token)
     try {
-      const res = await axios.get('http://10.2.88.154:4000/api/reminders', {
+      const remindersRes = await axios.get('http://192.168.0.177:4000/api/reminders', {
         headers: { Authorization: `Bearer ${token}` },
       });
+      const fetchedLogs = remindersRes.data;
+      setLogs(fetchedLogs);
 
-      const logs = res.data;
-      setLogs(logs);
+      const medsRes = await axios.get('http://192.168.0.177:4000/api/medications', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const fetchedMeds = medsRes.data;
+      setMeds(fetchedMeds);
 
-      // Build calendar marks
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
       const marks: any = {};
-      logs.forEach((log: any) => {
-        const date = log.timestamp.split('T')[0]; // e.g. '2025-05-18'
-        const color = log.status === 'voltooid' ? 'green' : 'red';
 
-        if (!marks[date]) {
-          marks[date] = { dots: [{ color }] };
-        } else {
-          marks[date].dots.push({ color });
+      fetchedLogs.forEach((log: any) => {
+        const date = log.timestamp.split('T')[0];
+        const color = log.status === 'voltooid' ? 'green' : 'red';
+        if (!marks[date]) marks[date] = { dots: [{ color }] };
+        else marks[date].dots.push({ color });
+      });
+
+      fetchedMeds.forEach((med: any) => {
+        const start = new Date(med.startDate);
+        const end = med.endDate ? new Date(med.endDate) : null;
+        let current = new Date(start);
+
+        while (!end || current <= end) {
+          const dateStr = current.toISOString().split('T')[0];
+
+          if (current > today) {
+            const alreadyLogged = fetchedLogs.some(
+              (l: any) => l.medication_id === med.id && l.timestamp.startsWith(dateStr)
+            );
+            if (!alreadyLogged) {
+              if (!marks[dateStr]) marks[dateStr] = { dots: [{ color: 'blue' }] };
+              else marks[dateStr].dots.push({ color: 'blue' });
+            }
+          }
+          current.setDate(current.getDate() + 1);
         }
       });
 
-      // Tell calendar to show dots
       Object.keys(marks).forEach((d) => {
         marks[d].marked = true;
       });
@@ -112,53 +101,137 @@ const [markedDates, setMarkedDates] = useState<MarkedDates>({});
     }
   };
 
-  // Filter logs for selected day
-  const filteredLogs: ReminderLog[] = selectedDate
-  ? logs.filter((l) => l.timestamp.startsWith(selectedDate))
-  : [];
+  const filteredItems: any[] = [];
+  if (selectedDate) {
+    const logsForDay = logs.filter((l) => l.timestamp.startsWith(selectedDate));
+    filteredItems.push(...logsForDay);
 
+    if (logsForDay.length === 0) {
+      meds.forEach((med) => {
+        const start = new Date(med.startDate);
+        const end = med.endDate ? new Date(med.endDate) : null;
+        const date = new Date(selectedDate);
 
+        if (date >= start && (!end || date <= end)) {
+          filteredItems.push({
+            id: med.id,
+            status: 'gepland',
+            Medication: { naam: med.naam },
+            dosis: med.dosis,
+            tijd: med.time,
+          });
+        }
+      });
+    }
+  }
 
-    
   return (
-    <View style={{ flex: 1, padding: 10 }}>
-      <Calendar
-        markedDates={{
-          ...markedDates,
-          [selectedDate]: {
-            ...(markedDates[selectedDate] || { dots: [] }),
-            selected: true,
-            selectedColor: '#00adf5',
-          },
-        }}
-        markingType="multi-dot"
-        onDayPress={(day) => setSelectedDate(day.dateString)}
-      />
+    <ImageBackground
+      source={require('../assets/background.jpg')}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay} />
+      <SafeAreaView style={styles.container}>
+        <Calendar
+          markedDates={{
+            ...markedDates,
+            [selectedDate]: {
+              ...(markedDates[selectedDate] || { dots: [] }),
+              selected: true,
+              selectedColor: '#00adf5',
+            },
+          }}
+          markingType="multi-dot"
+          onDayPress={(day) => setSelectedDate(day.dateString)}
+        />
 
-      <Text style={styles.heading}>
-        {selectedDate ? `Logs for ${selectedDate}` : 'Kies een dag'}
-      </Text>
+        <Text style={styles.heading}>
+          {selectedDate ? `Logs voor ${selectedDate}` : 'Kies een dag'}
+        </Text>
 
-      <FlatList
-        data={filteredLogs}
-        keyExtractor={(_, index) => index.toString()}
-        renderItem={({ item }) => (
-          <Text style={{ padding: 4 }}>
-            {item.Medication?.naam ?? 'Onbekend'} – {item.status.toUpperCase()}
-          </Text>
-        )}
-      />
+        <FlatList
+          data={filteredItems}
+          keyExtractor={(item, index) => item.id?.toString() ?? index.toString()}
+          renderItem={({ item }) => {
+            let bgColor = '#f0f0f0';
+            let textColor = '#555';
+            let statusText = '';
 
-    </View>
+            if (item.status === 'voltooid') {
+              bgColor = '#d4edda';
+              textColor = '#155724';
+              statusText = 'VOLTOOID';
+            } else if (item.status === 'gemist') {
+              bgColor = '#f8d7da';
+              textColor = '#721c24';
+              statusText = 'GEMIST';
+            } else if (item.status === 'gepland') {
+              bgColor = '#dbe9f4';
+              textColor = '#0d3c61';
+              statusText = 'GEPLAND';
+            }
+
+            return (
+              <View style={[styles.logItem, { backgroundColor: bgColor }]}>
+                <Text style={[styles.logText, { color: textColor }]}>
+                  {item.Medication?.naam ?? 'Onbekend'}
+                </Text>
+                {item.dosis && (
+                  <Text style={[styles.logText, { color: textColor }]}>
+                    💊 Dosis: {item.dosis}
+                  </Text>
+                )}
+                {item.tijd && (
+                  <Text style={[styles.logText, { color: textColor }]}>
+                    🕒 Tijd: {item.tijd}
+                  </Text>
+                )}
+                <Text style={[styles.logText, { color: textColor }]}>
+                  Status: {statusText}
+                </Text>
+              </View>
+            );
+          }}
+          ListEmptyComponent={
+            <Text style={{ textAlign: 'center', marginTop: 20 }}>
+              Geen logs of geplande medicatie voor deze dag
+            </Text>
+          }
+        />
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+    position: 'relative',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)', 
+  },
+  container: {
+    flex: 1,
+    paddingTop: 40,
+    paddingHorizontal: 20,
+  },
   heading: {
     fontSize: 18,
     marginTop: 10,
     marginBottom: 5,
     fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  logItem: {
+    borderRadius: 8,
+    padding: 10,
+    marginVertical: 5,
+  },
+  logText: {
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
-

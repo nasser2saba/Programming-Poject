@@ -1,7 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MedicationScreen from '../screens/MedicationScreen';
-//import PlaceholderScreen from '../screens/PlaceholderScreen';
 import ReminderScreen from '../screens/HerinneringenScreen';
 import HistoryScreen from '../screens/HistoriekScreen';
 import ProfileScreen from '../screens/ProfielScreen';
