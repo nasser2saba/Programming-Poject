@@ -2,6 +2,22 @@ const { Expo } = require('expo-server-sdk');
 const User = require('../models/user');
 let expo = new Expo();
 
+exports.savePushToken = async (req, res) => {
+  const { token } = req.body;
+  if (!token) {
+    return res.status(400).json({ error: 'Geen token meegegeven' });
+  }
+
+  try {
+    req.user.expo_push_token = token;
+    await req.user.save();
+    res.json({ message: 'Push token opgeslagen' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Opslaan push token mislukt' });
+  }
+};
+
 exports.sendTestEmail = async (req, res) => {
   try {
     const user = req.user;
