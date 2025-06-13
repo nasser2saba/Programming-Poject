@@ -1,11 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ImageBackground,
+} from 'react-native';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HerinneringenScreen() {
-  const [meds, setMeds] = useState<any[]>([]);
+  const [medsByDate, setMedsByDate] = useState<any>({});
   const [takenStatus, setTakenStatus] = useState<{ [id: number]: boolean }>({});
 
   const API_URL = 'http://192.168.0.177:4000/api/medications';
@@ -14,81 +23,174 @@ export default function HerinneringenScreen() {
     fetchMeds();
   }, []);
 
+  const formatDateKey = (date: Date) => date.toISOString().split('T')[0];
+
   const fetchMeds = async () => {
     const token = await SecureStore.getItemAsync('token');
     try {
       const res = await axios.get(API_URL, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      setMeds(res.data);
+
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+      const dayBeforeYesterday = new Date(today);
+      dayBeforeYesterday.setDate(today.getDate() - 2);
+
+      const grouped: any = {
+        vandaag: [],
+        gisteren: [],
+        eergisteren: [],
+      };
+
+      res.data.forEach((med: any) => {
+        const medDate = new Date(med.startDate);
+        medDate.setHours(0, 0, 0, 0);
+
+        if (medDate.getTime() === today.setHours(0, 0, 0, 0)) grouped.vandaag.push(med);
+        else if (medDate.getTime() === yesterday.setHours(0, 0, 0, 0)) grouped.gisteren.push(med);
+        else if (medDate.getTime() === dayBeforeYesterday.setHours(0, 0, 0, 0)) grouped.eergisteren.push(med);
+      });
+
+      setMedsByDate(grouped);
     } catch (err) {
       console.error(err);
       Alert.alert('Error', 'Kon medicatie niet ophalen');
     }
   };
 
-  const toggleTaken = (id: number) => {
-    setTakenStatus(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
+  const toggleTaken = async (id: number) => {
+    const newStatus = takenStatus[id] ? 'gemist' : 'voltooid';
+    setTakenStatus((prev) => ({ ...prev, [id]: !prev[id] }));
+
+    const token = await SecureStore.getItemAsync('token');
+    try {
+      await axios.patch(`http://192.168.0.177:4000/api/reminders/${id}`, {
+        status: newStatus,
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Fout', 'Status updaten mislukt');
+    }
   };
 
   const renderMedItem = ({ item }: { item: any }) => {
-    // Determine status color
-    let color = '#000'; // default
-    if (takenStatus[item.id]) {
-      color = 'green';
-    } else if (new Date(item.startDate) < new Date()) {
-      color = 'red';
-    }
-
-    const nextTime = '09:00';
+    const nextTime = item.time ?? 'Onbekend';
+    const isTaken = takenStatus[item.id];
 
     return (
       <TouchableOpacity
-        style={[styles.medCard, { borderColor: color, borderWidth: 2 }]}
+        style={[styles.medCard, { borderColor: isTaken ? 'green' : '#ccc' }]}
         onPress={() => toggleTaken(item.id)}
       >
         <View style={styles.medInfo}>
-          <Text style={[styles.medName, { color }]}>{item.naam}</Text>
+          <Text style={[styles.medName, isTaken && styles.strikethrough]}>{item.naam}</Text>
           <Text style={styles.medDetails}>💊 Dosis: {item.dosis}</Text>
-          <Text style={styles.medDetails}>⏰ Volgende inname: {nextTime}</Text>
+          <Text style={styles.medDetails}>🕒 Tijd: {nextTime}</Text>
         </View>
         <Ionicons
-          name={takenStatus[item.id] ? 'checkbox' : 'square-outline'}
-          size={24}
-          color={takenStatus[item.id] ? 'green' : 'black'}
+          name={isTaken ? 'checkbox' : 'square-outline'}
+          size={26}
+          color={isTaken ? '#4CAF50' : '#0077cc'}
         />
       </TouchableOpacity>
     );
   };
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>💊 Herinneringen</Text>
-      <FlatList
-        data={meds}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderMedItem}
-      />
+  const renderSection = (title: string, data: any[]) => (
+    <View>
+      <Text style={styles.sectionHeader}>{title}</Text>
+      {data.length === 0 ? (
+        <Text style={styles.noMed}>Geen medicatie</Text>
+      ) : (
+        <FlatList
+          data={data}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderMedItem}
+        />
+      )}
     </View>
+  );
+
+  return (
+    <ImageBackground
+      source={require('../assets/background.jpg')}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay} />
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.title}>💊 Herinneringen</Text>
+        {renderSection('Vandaag', medsByDate.vandaag || [])}
+        {renderSection('Gisteren', medsByDate.gisteren || [])}
+        {renderSection('Eergisteren', medsByDate.eergisteren || [])}
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
+  background: {
+    flex: 1,
+    position: 'relative',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+  },
+  container: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 40,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    textAlign: 'center',
+    color: '#0f0f0f',
+  },
+  sectionHeader: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 20,
+    marginBottom: 10,
+    color: '#0f0f0f',
+  },
+  noMed: {
+    textAlign: 'center',
+    fontStyle: 'italic',
+    color: '#888',
+    marginBottom: 10,
+  },
   medCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 15,
+    padding: 16,
     marginVertical: 8,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
+    backgroundColor: '#ffffffcc', // white with opacity
+    borderRadius: 12,
+    borderWidth: 2,
   },
-  medInfo: {},
-  medName: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
-  medDetails: { fontSize: 14, color: '#555' },
+  medInfo: {
+    flex: 1,
+  },
+  medName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0077cc',
+    marginBottom: 4,
+  },
+  medDetails: {
+    fontSize: 14,
+    color: '#555',
+  },
+  strikethrough: {
+    textDecorationLine: 'line-through',
+    color: 'green',
+  },
 });
