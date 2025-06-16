@@ -5,19 +5,10 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 console.log("✅ auth.js geladen");
 
-
-// Registratie route
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.post('/save-push-token', authMiddleware, authController.savePushToken);
 
-
-// Temporary test route 
-//router.get('/test', (req, res) => {
-//  res.send('Test route werkt');
-//});
-
+router.get('/me', authMiddleware, authController.getCurrentUser);
 
 module.exports = router;
-
-
