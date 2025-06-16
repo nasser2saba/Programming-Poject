@@ -9,6 +9,8 @@
      frequentie: { type: DataTypes.STRING, allowNull: false },
      startDate: { type: DataTypes.DATEONLY, allowNull: false },
      endDate: { type: DataTypes.DATEONLY },
+     time: { type: DataTypes.STRING }, 
    });
 
    module.exports = Medication;
+
