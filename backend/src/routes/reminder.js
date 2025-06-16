@@ -8,5 +8,7 @@ router.use(authMiddleware);
 
 // Fetch logs for current user
 router.get('/', reminderCtrl.getLogs);
+router.patch('/:id', reminderCtrl.updateLogStatus);
+
 
 module.exports = router;

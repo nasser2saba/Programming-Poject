@@ -1,10 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
-const { sendTestEmail, sendTestPush } = require('../controllers/notificationController');
+const notifCtrl = require('../controllers/notificationController');
 
-router.post('/send-test-email', authMiddleware, sendTestEmail);
-router.post('/send-test-push', authMiddleware, sendTestPush); // deze toevoegen
+// Use auth middleware for all routes
+router.use(authMiddleware);
+
+router.post('/send-test-email', notifCtrl.sendTestEmail);
+router.post('/send-test-push', notifCtrl.sendTestPush);
+router.post('/savePushToken', notifCtrl.savePushToken);
 
 module.exports = router;
-
