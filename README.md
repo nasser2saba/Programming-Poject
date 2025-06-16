@@ -37,8 +37,8 @@ De primaire doelgroep bestaat uit:
 |ID	|Use Case	|User Story	|Acceptatiecriteria|
 |------|----------|--------------|------------------|
 |UC1|	Medicatie toevoegen|Als gebruiker wil ik een nieuw medicijn toevoegen zodat ik herinneringen krijg.|Formulier met naam, dosis, frequentie, datum; bevestiging bij opslaan.|
-|UC2|	Medicatie bewerken/verwijderen|	Als gebruiker wil ik medicatie aanpassen of verwijderen.|	Edit- en delete-knoppen; confirmatie bij verwijderen.|
-|UC3|	Overzicht medicatieschema|	Als gebruiker wil ik een weekoverzicht zien.|	Kalenderweergave met icoontjes en legenda voltooide/gemiste doses.|
+|UC2|	Medicatie verwijderen|	Als gebruiker wil ik medicatie verwijderen.|	Delete-knop; confirmatie bij verwijderen.|
+|UC3|	Overzicht medicatieschema|	Als gebruiker wil ik een overzicht zien.|	Kalenderweergave met icoontjes en legenda voltooide/gemiste doses.|
 |UC4|	Notificaties ontvangen|	Als gebruiker wil ik herinneringen op ingestelde tijden.|	Keuze push of e-mail in profiel; testknop voor voorbeeldmelding.|
 |UC5|	Historiek bekijken	|Als gebruiker wil ik mijn inname-historiek zien.	|Lijst met datum, tijd, status; filter op voltooid/gemist.|
 
