@@ -5,8 +5,7 @@
 De Medicatie Herinneringsapp heeft als doel om ouderen en chronische patiënten te helpen bij het correct en tijdig innemen van hun medicatie. De belangrijkste doelstellingen zijn:
 
 **1.	Medicatiebeheer (MVP)**
-o	CRUD: toevoegen, bewerken, verwijderen van medicijnen met naam, dosis, frequentie.
-o	Zoeken en filteren op naam.
+o	CRUD: toevoegen en verwijderen van medicijnen met naam, dosis, frequentie, tijd, en datum.
 
 **2.	Herinneringen & Notificaties (MVP)**
 o	Push-notificaties via Firebase Cloud Messaging (FCM).
@@ -63,10 +62,10 @@ Sprint	Functionaliteiten	Prioriteit	Op te leveren
 •	Medication(id, user_id, naam, dosis, frequentie, start_date, end_date)
 •	ReminderLog(id, medication_id, timestamp, status)
 
-## 5. Wireframes & UI Schema
-•	Home (Medicatie-overzicht): lijst + "+" knop
-•	Medicatie Detail: invulvelden + Save/Delete
-•	Kalender: weekweergave met icoontjes
+## 5. UI Schema
+•	Medicatie (Medicatie-overzicht): lijst + "+" knop, save & Delete
+•	Herinneringen: invulvelden om medicatie in te nemen
+•	Historiek: kalender weergave met icoontjes
 •	Profiel/Instellingen: notificatievoorkeur, accountinfo
 
 ## 6. Conclusie
