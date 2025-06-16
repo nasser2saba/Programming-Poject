@@ -83,16 +83,6 @@ export default function HerinneringenScreen() {
     setTakenStatus((prev) => ({ ...prev, [id]: !prev[id] }));
 
     const token = await SecureStore.getItemAsync('token');
-    /*try {
-      await axios.patch(
-        `http://10.2.89.207:4000/api/reminders/${id}`,
-        { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-    } catch (err) {
-      console.error(err);
-      Alert.alert('Fout', 'Status updaten mislukt');
-    }*/
   };
 
   const renderMedItem = ({ item }: { item: any }) => {

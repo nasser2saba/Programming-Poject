@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import axios from 'axios';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 export default function RegisterScreen({ navigation }: any) {
   const [naam, setNaam] = useState('');
@@ -9,7 +11,7 @@ export default function RegisterScreen({ navigation }: any) {
 
   const handleRegister = async () => {
     try {
-      const res = await axios.post('http://10.2.88.154:4000/api/auth/register', {
+      const res = await axios.post('http://192.168.0.177:4000/api/auth/register', {
         naam,
         email,
         password,
@@ -24,7 +26,7 @@ export default function RegisterScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Text>Naam:</Text>
       <TextInput style={styles.input} value={naam} onChangeText={setNaam} />
       <Text>Email:</Text>
@@ -32,11 +34,11 @@ export default function RegisterScreen({ navigation }: any) {
       <Text>Wachtwoord:</Text>
       <TextInput style={styles.input} value={password} onChangeText={setPassword} secureTextEntry />
       <Button title="Registreer" onPress={handleRegister} />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 20 },
+  container: { flex: 1, justifyContent: 'center', padding: 20, paddingTop: 20, paddingHorizontal: 20, backgroundColor: '#f9f9f9' },
   input: { borderWidth: 1, marginVertical: 10, padding: 8, borderRadius: 5 }
 });
