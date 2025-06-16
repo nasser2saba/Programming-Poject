@@ -1,21 +1,44 @@
-
 const Medication = require('../models/medication');
 
-   exports.create = async (req, res) => {
-     try {
-       const { naam, dosis, frequentie, startDate, endDate } = req.body;
-       const med = await Medication.create({
-         userId: req.user.id,
-         naam, dosis, frequentie, startDate, endDate
-       });
-       res.status(201).json(med);
-     } catch (err) { res.status(500).json({ error: err.message }); }
-   };
+exports.create = async (req, res) => {
+  try {
+    const { naam, dosis, frequentie, startDate, endDate, time } = req.body;
 
-   exports.list = async (req, res) => {
-     const meds = await Medication.findAll({ where: { userId: req.user.id } });
-     res.json(meds);
-   };
+    const med = await Medication.create({
+      userId: req.user.id,
+      naam,
+      dosis,
+      frequentie,
+      startDate,
+      endDate,
+      time,
+    });
+
+    res.status(201).json(med);
+  } catch (err) {
+    console.error('❌ Medicatie maken mislukt:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+    exports.getMedications = async (req, res) => {
+      // example logic
+      const userId = req.user.id;
+      const meds = await Medication.findAll({ where: { userId } });
+      res.json(meds);
+    };
+
+
+    exports.list = async (req, res) => {
+      try {
+        const meds = await Medication.findAll({ where: { userId: req.user.id } });
+        res.json(meds);
+      } catch (err) {
+        console.error('❌ Fout bij ophalen medicijnen:', err);
+        res.status(500).json({ error: 'Serverfout bij ophalen medicijnen' });
+      }
+    };
+
 
    exports.update = async (req, res) => {
      const { id } = req.params;

@@ -3,30 +3,46 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const { UniqueConstraintError, ValidationError } = require('sequelize');
 
+// /api/auth/me
+exports.getCurrentUser = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: 'Gebruiker niet gevonden' });
+    }
+
+    res.json({
+      email: user.email,
+      name: user.naam || '', // Voeg eventueel ook 'naam' toe
+    });
+  } catch (err) {
+    console.error('❌ Fout bij ophalen gebruiker:', err);
+    res.status(500).json({ error: 'Serverfout' });
+  }
+};
+
 exports.register = async (req, res) => {
   console.log('🔍 register payload =', req.body);
   try {
     const { naam, email, password } = req.body;
 
-    // Verplicht veld-check
     if (!naam || !email || !password) {
-      return res.status(400).json({ 
-        error: 'naam, email en password zijn verplicht' 
-      });
+      return res.status(400).json({ error: 'naam, email en password zijn verplicht' });
     }
 
-    // Wachtwoord hashen
     const hashed_password = await bcrypt.hash(password, 10);
 
-    // Gebruiker aanmaken
     const user = await User.create({
       naam,
       email,
       hashed_password,
     });
 
-    return res.status(201).json({ 
-      message: 'Gebruiker geregistreerd', 
+    return res.status(201).json({
+      message: 'Gebruiker geregistreerd',
       user: {
         id: user.id,
         naam: user.naam,
@@ -35,7 +51,6 @@ exports.register = async (req, res) => {
       }
     });
   } catch (error) {
-    // Duplicate e‑mail
     if (error instanceof UniqueConstraintError) {
       return res.status(400).json({
         error: 'E-mail bestaat al',
@@ -45,7 +60,6 @@ exports.register = async (req, res) => {
         }))
       });
     }
-    // Andere validatiefouten
     if (error instanceof ValidationError) {
       return res.status(400).json({
         error: 'Validatiefout',
@@ -56,10 +70,7 @@ exports.register = async (req, res) => {
       });
     }
     console.error(error);
-    return res.status(500).json({ 
-      error: 'Registratie mislukt', 
-      details: error.message 
-    });
+    return res.status(500).json({ error: 'Registratie mislukt', details: error.message });
   }
 };
 
@@ -67,44 +78,35 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Verplicht veld-check
     if (!email || !password) {
-      return res.status(400).json({ 
-        error: 'email en password zijn verplicht' 
-      });
+      return res.status(400).json({ error: 'email en password zijn verplicht' });
     }
 
-    // Zoek gebruiker op e‑mail
     const user = await User.findOne({ where: { email } });
     if (!user) {
       return res.status(401).json({ error: 'Ongeldige inloggegevens' });
     }
 
-    // Vergelijk wachtwoord
     const isMatch = await bcrypt.compare(password, user.hashed_password);
     if (!isMatch) {
       return res.status(401).json({ error: 'Ongeldige inloggegevens' });
     }
 
-    // Maak JWT (alleen id in payload)
     const token = jwt.sign(
       { id: user.id },
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
 
-    return res.json({ 
-      message: 'Login succesvol', 
-      token 
+    return res.json({
+      message: 'Login succesvol',
+      token
     });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'Inloggen mislukt' });
   }
 };
-
-
-
 
 exports.savePushToken = async (req, res) => {
   const { token } = req.body;
@@ -118,5 +120,3 @@ exports.savePushToken = async (req, res) => {
     res.status(500).json({ error: 'Opslaan mislukt' });
   }
 };
-
-

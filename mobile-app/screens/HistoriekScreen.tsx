@@ -106,23 +106,31 @@ export default function HistoryScreen() {
     const logsForDay = logs.filter((l) => l.timestamp.startsWith(selectedDate));
     filteredItems.push(...logsForDay);
 
-    if (logsForDay.length === 0) {
-      meds.forEach((med) => {
-        const start = new Date(med.startDate);
-        const end = med.endDate ? new Date(med.endDate) : null;
-        const date = new Date(selectedDate);
+    const selected = new Date(selectedDate);
+selected.setHours(0, 0, 0, 0); // strip time
 
-        if (date >= start && (!end || date <= end)) {
-          filteredItems.push({
-            id: med.id,
-            status: 'gepland',
-            Medication: { naam: med.naam },
-            dosis: med.dosis,
-            tijd: med.time,
-          });
-        }
-      });
-    }
+meds.forEach((med) => {
+  const start = new Date(med.startDate);
+  const end = med.endDate ? new Date(med.endDate) : null;
+
+  start.setHours(0, 0, 0, 0);
+  if (end) end.setHours(0, 0, 0, 0);
+
+  const isPlanned =
+    selected >= start &&
+    (!end || selected <= end) &&
+    !logsForDay.some((l) => l.medication_id === med.id);
+
+  if (isPlanned) {
+    filteredItems.push({
+      id: med.id,
+      status: 'gepland',
+      Medication: { naam: med.naam },
+      dosis: med.dosis,
+      tijd: med.time,
+    });
+  }
+});
   }
 
   return (
