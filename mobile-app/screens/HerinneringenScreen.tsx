@@ -12,6 +12,7 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Notifications from 'expo-notifications';
 
 export default function HerinneringenScreen() {
   const [medsByDate, setMedsByDate] = useState<any>({});
@@ -23,8 +24,6 @@ export default function HerinneringenScreen() {
     fetchMeds();
   }, []);
 
-  const formatDateKey = (date: Date) => date.toISOString().split('T')[0];
-
   const fetchMeds = async () => {
     const token = await SecureStore.getItemAsync('token');
     try {
@@ -33,25 +32,44 @@ export default function HerinneringenScreen() {
       });
 
       const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(today.getDate() - 1);
-      const dayBeforeYesterday = new Date(today);
-      dayBeforeYesterday.setDate(today.getDate() - 2);
 
       const grouped: any = {
         vandaag: [],
-        gisteren: [],
-        eergisteren: [],
       };
 
-      res.data.forEach((med: any) => {
-        const medDate = new Date(med.startDate);
-        medDate.setHours(0, 0, 0, 0);
+      for (const med of res.data) {
+        //console.log(med);
+        const start = new Date(med.startDate);
+        const end = med.endDate ? new Date(med.endDate) : null;
 
-        if (medDate.getTime() === today.setHours(0, 0, 0, 0)) grouped.vandaag.push(med);
-        else if (medDate.getTime() === yesterday.setHours(0, 0, 0, 0)) grouped.gisteren.push(med);
-        else if (medDate.getTime() === dayBeforeYesterday.setHours(0, 0, 0, 0)) grouped.eergisteren.push(med);
-      });
+        // Schedule notifications
+        if (med.time) {
+          const [hourStr, minuteStr] = med.time.split(':');
+          const hour = parseInt(hourStr, 10);
+          const minute = parseInt(minuteStr, 10);
+
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: '💊 Herinnering',
+              body: `Neem je medicijn: ${med.naam}`,
+              sound: true,
+            },
+            trigger: {
+              hour,
+              minute,
+              repeats: true,
+            } as Notifications.CalendarTriggerInput,
+          });
+        }
+
+        // Group medication
+       //console.log(start);
+       // console.log(today.getDate);
+        if (start.getDate() <= today.getDate() && (!end || today.getDate <= end.getDate)) {
+          console.log("vandaag" + med );
+          grouped.vandaag.push(med);
+        }
+      }
 
       setMedsByDate(grouped);
     } catch (err) {
@@ -65,16 +83,16 @@ export default function HerinneringenScreen() {
     setTakenStatus((prev) => ({ ...prev, [id]: !prev[id] }));
 
     const token = await SecureStore.getItemAsync('token');
-    try {
-      await axios.patch(`http://192.168.0.177:4000/api/reminders/${id}`, {
-        status: newStatus,
-      }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    /*try {
+      await axios.patch(
+        `http://10.2.89.207:4000/api/reminders/${id}`,
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
     } catch (err) {
       console.error(err);
       Alert.alert('Fout', 'Status updaten mislukt');
-    }
+    }*/
   };
 
   const renderMedItem = ({ item }: { item: any }) => {
@@ -87,7 +105,9 @@ export default function HerinneringenScreen() {
         onPress={() => toggleTaken(item.id)}
       >
         <View style={styles.medInfo}>
-          <Text style={[styles.medName, isTaken && styles.strikethrough]}>{item.naam}</Text>
+          <Text style={[styles.medName, isTaken && styles.strikethrough]}>
+            {item.naam}
+          </Text>
           <Text style={styles.medDetails}>💊 Dosis: {item.dosis}</Text>
           <Text style={styles.medDetails}>🕒 Tijd: {nextTime}</Text>
         </View>
@@ -125,8 +145,6 @@ export default function HerinneringenScreen() {
       <SafeAreaView style={styles.container}>
         <Text style={styles.title}>💊 Herinneringen</Text>
         {renderSection('Vandaag', medsByDate.vandaag || [])}
-        {renderSection('Gisteren', medsByDate.gisteren || [])}
-        {renderSection('Eergisteren', medsByDate.eergisteren || [])}
       </SafeAreaView>
     </ImageBackground>
   );
@@ -172,7 +190,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     marginVertical: 8,
-    backgroundColor: '#ffffffcc', // white with opacity
+    backgroundColor: '#ffffffcc',
     borderRadius: 12,
     borderWidth: 2,
   },
